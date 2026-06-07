@@ -8,6 +8,8 @@ import com.rosan.dhizuku.aidl.IDhizukuRemoteProcess;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings({"RedundantThrows", "CallToPrintStackTrace"})
@@ -118,8 +120,14 @@ public class RemoteProcess extends IDhizukuRemoteProcess.Stub {
         }
     }
 
+    private static final ExecutorService TRANSFER_EXECUTOR = Executors.newCachedThreadPool(runnable -> {
+        Thread thread = new Thread(runnable, "DhizukuRemoteProcess-transfer");
+        thread.setDaemon(true);
+        return thread;
+    });
+
     public static void transfer(InputStream in, OutputStream out) {
-        new Thread(() -> {
+        TRANSFER_EXECUTOR.execute(() -> {
             byte[] buf = new byte[8 * 1024];
             //noinspection UnusedAssignment
             int len = 0;
@@ -144,6 +152,6 @@ public class RemoteProcess extends IDhizukuRemoteProcess.Stub {
                     e.printStackTrace();
                 }
             }
-        }).start();
+        });
     }
 }

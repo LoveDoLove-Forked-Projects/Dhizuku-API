@@ -13,13 +13,13 @@ import androidx.annotation.NonNull;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UserService extends IUserServiceManager.Stub {
     private final Context mContext;
 
-    private final HashMap<String, IBinder> map = new HashMap<>();
+    private final ConcurrentHashMap<String, IBinder> map = new ConcurrentHashMap<>();
 
     @Keep
     public UserService(Context context) {
@@ -53,7 +53,7 @@ public class UserService extends IUserServiceManager.Stub {
                 service = (IBinder) clazz.getConstructor().newInstance();
             }
             transact(service, 1);
-             map.put(key, service);
+            map.put(key, service);
             return service;
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
                  InvocationTargetException | RemoteException |

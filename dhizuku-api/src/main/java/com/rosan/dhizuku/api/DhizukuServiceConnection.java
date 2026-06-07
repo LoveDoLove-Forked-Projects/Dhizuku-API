@@ -6,13 +6,13 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 class DhizukuServiceConnection {
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private final List<ServiceConnection> connections = new ArrayList<>();
+    private final List<ServiceConnection> connections = new CopyOnWriteArrayList<>();
 
     public void onServiceConnected(ComponentName name, IBinder service) {
         handler.post(() -> {

@@ -30,12 +30,12 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class Dhizuku {
     @SuppressLint("StaticFieldLeak")
-    private static Context mContext = null;
+    private static volatile Context mContext = null;
 
     @SuppressLint("StaticFieldLeak")
-    private static ComponentName mOwnerComponent;
+    private static volatile ComponentName mOwnerComponent;
 
-    private static IDhizuku remote = null;
+    private static volatile IDhizuku remote = null;
 
     public static @Nullable ComponentName getOwnerComponent(@NonNull Context context) {
         DevicePolicyManager manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
@@ -74,12 +74,17 @@ public class Dhizuku {
      */
     public static boolean init(@NonNull Context context) {
         DevicePolicyManager manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
-        if (remote != null && remote.asBinder().pingBinder() && (manager.isDeviceOwnerApp(getOwnerPackageName()) || manager.isProfileOwnerApp(getOwnerPackageName())))
-            return true;
+        IDhizuku server = remote;
+        if (server != null && server.asBinder().pingBinder()) {
+            String currentOwnerPackageName = getOwnerComponent().getPackageName();
+            if (manager.isDeviceOwnerApp(currentOwnerPackageName) || manager.isProfileOwnerApp(currentOwnerPackageName))
+                return true;
+        }
 
-        mOwnerComponent = getOwnerComponent(context);
-        if (mOwnerComponent == null) return false;
-        String packageName = getOwnerPackageName();
+        ComponentName ownerComponent = getOwnerComponent(context);
+        if (ownerComponent == null) return false;
+        mOwnerComponent = ownerComponent;
+        String packageName = ownerComponent.getPackageName();
         String authority = DhizukuVariables.getProviderAuthorityName(packageName);
 
         Uri uri = new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT).authority(authority).build();
@@ -99,7 +104,8 @@ public class Dhizuku {
         remote = IDhizuku.Stub.asInterface(iBinder);
         try {
             iBinder.linkToDeath(() -> {
-                if (remote.asBinder() != iBinder) return;
+                IDhizuku current = remote;
+                if (current == null || current.asBinder() != iBinder) return;
                 remote = null;
             }, 0);
         } catch (RemoteException e) {
@@ -111,8 +117,13 @@ public class Dhizuku {
     }
 
     private static @NonNull IDhizuku requireServer() {
-        if (remote != null && remote.asBinder().pingBinder()) return remote;
-        if (mContext != null && init(mContext)) return remote;
+        IDhizuku server = remote;
+        if (server != null && server.asBinder().pingBinder()) return server;
+        Context context = mContext;
+        if (context != null && init(context)) {
+            server = remote;
+            if (server != null) return server;
+        }
         throw new IllegalStateException("binder haven't been received");
     }
 
@@ -147,8 +158,9 @@ public class Dhizuku {
     }
 
     public static @NonNull ComponentName getOwnerComponent() {
-        assert mOwnerComponent != null;
-        return mOwnerComponent;
+        ComponentName component = mOwnerComponent;
+        if (component == null) throw new IllegalStateException("owner component haven't been received");
+        return component;
     }
 
     /**

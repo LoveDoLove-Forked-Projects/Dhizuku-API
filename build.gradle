@@ -5,8 +5,8 @@ plugins {
 
 ext {
     MIN_SDK = 26
-    TARGET_SDK = 36
+    TARGET_SDK = 37
 
-    API_VERSION = '2.5.4'
-    SERVER_API_VERSION = '0.0.10'
+    API_VERSION = '2.6.0'
+    SERVER_API_VERSION = '0.1.0'
 }
